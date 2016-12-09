@@ -96,7 +96,7 @@ public class BLCgui extends JFrame {
 		StyleConstants.setForeground(error, Color.RED);
 		
 		// Made with built-in GUI creator
-		setTitle("Co-operators Broken Link Checker ©");
+		setTitle("Broken Link Checker ©");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 576, 469);
 		
@@ -108,7 +108,7 @@ public class BLCgui extends JFrame {
 		mnAbout.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				JOptionPane.showMessageDialog(null, "Developed by Timothy Agda for The Co-operators", "About", JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(null, "Developed by Josh Agda", "About", JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
 		menuBar.add(mnAbout);
