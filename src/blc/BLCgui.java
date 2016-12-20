@@ -100,7 +100,7 @@ public class BLCgui extends JFrame {
 		StyleConstants.setForeground(error, Color.RED);
 		
 		// Made with built-in GUI creator
-		setTitle("Co-operators Broken Link Checker ©");
+		setTitle("Broken Link Checker ©");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 659, 516);
 		
