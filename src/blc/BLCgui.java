@@ -6,6 +6,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.IOException;
 
 import javax.swing.ButtonGroup;
 import javax.swing.GroupLayout;
@@ -35,6 +37,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
+import javax.swing.event.CaretListener;
+import javax.swing.event.CaretEvent;
 
 public class BLCgui extends JFrame {
 
@@ -57,7 +61,7 @@ public class BLCgui extends JFrame {
 		System.setProperty("webdriver.ie.driver", "drivers\\IEDriverServer.exe");
 		System.setProperty("webdriver.chrome.driver", "drivers\\chromedriver.exe");
 		System.setProperty("webdriver.gecko.driver", "drivers\\geckodriver.exe");
-
+		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -96,9 +100,9 @@ public class BLCgui extends JFrame {
 		StyleConstants.setForeground(error, Color.RED);
 		
 		// Made with built-in GUI creator
-		setTitle("Broken Link Checker ©");
+		setTitle("Co-operators Broken Link Checker ©");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 576, 469);
+		setBounds(100, 100, 659, 516);
 		
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
@@ -108,7 +112,11 @@ public class BLCgui extends JFrame {
 		mnAbout.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				JOptionPane.showMessageDialog(null, "Developed by Josh Agda", "About", JOptionPane.INFORMATION_MESSAGE);
+				try {
+					java.awt.Desktop.getDesktop().edit(new File("About.docx"));
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		menuBar.add(mnAbout);
@@ -118,7 +126,7 @@ public class BLCgui extends JFrame {
 		mnHelp.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				JOptionPane.showMessageDialog(null, "How to use:\nFill in the required fields and then click \"Scan\"", "Help", JOptionPane.QUESTION_MESSAGE);
+				JOptionPane.showMessageDialog(null, "How to use:\n1) Fill in the required fields\n2) Click \"Scan\"\n3) Read results from Excel file", "Help", JOptionPane.QUESTION_MESSAGE);
 			}
 		});
 		menuBar.add(mnHelp);
@@ -126,28 +134,38 @@ public class BLCgui extends JFrame {
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 
-		JLabel lblUrl = new JLabel("URL:*");
+		JLabel lblUrl = new JLabel("URL:");
+		lblUrl.setToolTipText("URL to scan");
 
 		textFieldUrl = new JTextField();
 		textFieldUrl.setColumns(10);
 
-		JLabel lblBrowser = new JLabel("Browser:*");
+		JLabel lblBrowser = new JLabel("Browser:");
+		lblBrowser.setToolTipText("URL browser used for screenshots. Click on the checkbox to enable/disable.");
 
 		JRadioButton rdbtnIe = new JRadioButton("IE");
+		rdbtnIe.setToolTipText("URL browser used for screenshots. Click on the checkbox to enable/disable.");
+		rdbtnIe.setEnabled(false);
 		rdbtnIe.setSelected(true);
 		buttonGroupBrowser.add(rdbtnIe);
 
 		JRadioButton rdbtnFirefox = new JRadioButton("Firefox");
+		rdbtnFirefox.setToolTipText("URL browser used for screenshots. Click on the checkbox to enable/disable.");
+		rdbtnFirefox.setEnabled(false);
 		buttonGroupBrowser.add(rdbtnFirefox);
 
 		JRadioButton rdbtnChrome = new JRadioButton("Chrome");
+		rdbtnChrome.setToolTipText("URL browser used for screenshots. Click on the checkbox to enable/disable.");
+		rdbtnChrome.setEnabled(false);
 		buttonGroupBrowser.add(rdbtnChrome);
 
 		JButton btnStop = new JButton("Stop");
+		btnStop.setToolTipText("Stop scan");
 		btnStop.setEnabled(false);
 
 		// Checkbox button action
 		JCheckBox chckbxSaveScreenshots = new JCheckBox("Save screenshots?");
+		chckbxSaveScreenshots.setToolTipText("URL browser used for screenshots. Click on this checkbox to enable/disable.");
 		chckbxSaveScreenshots.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				// Enables all check boxes if enabled
@@ -162,7 +180,6 @@ public class BLCgui extends JFrame {
 				}
 			}
 		});
-		chckbxSaveScreenshots.setSelected(true);
 
 		JScrollPane scrollPane = new JScrollPane();
 		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
@@ -171,27 +188,49 @@ public class BLCgui extends JFrame {
 		textPaneMessages.setEditable(false);
 
 		JSlider slider = new JSlider();
+		slider.setToolTipText("The limit of the amount of unique links scanned (0 = no limit)");
 		slider.setMaximum(1000);
 		
 		// Slider function to change the text field if slider is 0
 		slider.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent arg0) {
-				textFieldLimit.setText(Integer.toString(slider.getValue()));
-				
-				if (textFieldLimit.getText().equals("0")) {
-					textFieldLimit.setText("No Limit");
+				try {
+					textFieldLimit.setText(Integer.toString(slider.getValue()));
+					
+					if (textFieldLimit.getText().equals("0")) {
+						textFieldLimit.setText("No Limit");
+					}
+				} catch (Exception e) {
 				}
 			}
 		});
 		
 		JProgressBar progressBar = new JProgressBar();
+		progressBar.setToolTipText("Progress Bar");
 		progressBar.setStringPainted(true);
 		progressBar.setString("%");
 		
+		textFieldLimit = new JTextField();
+		textFieldLimit.addCaretListener(new CaretListener() {
+			public void caretUpdate(CaretEvent arg0) {
+				try {
+					if (textFieldLimit.getText().length() > 0) {
+						slider.setValue(Integer.parseInt(textFieldLimit.getText()));
+					}
+				} catch (Exception e) {
+				}
+			}
+		});
+		textFieldLimit.setToolTipText("The limit of the amount of unique links scanned (0 = No Limit)");
+		textFieldLimit.setHorizontalAlignment(SwingConstants.CENTER);
+		textFieldLimit.setText("50");
+		textFieldLimit.setColumns(10);
+		
 		JButton btnScan = new JButton("Scan");
+		btnScan.setToolTipText("Start scan");
 		btnScan.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				if (textFieldUrl.getText().length() > 0 && textFieldSaveTo.getText().length() > 0) {
+				if (textFieldUrl.getText().length() > 0 && textFieldSaveTo.getText().length() > 0 && textFieldLimit.getText().length() > 0) {
 					char browserType = '0';
 
 					// Determine browser type
@@ -205,12 +244,25 @@ public class BLCgui extends JFrame {
 					}
 
 					// Run the normal threaded version of BLC
-					MainBLCRunnable brokenLinkScan = new MainBLCRunnable(textFieldSaveTo.getText(), slider.getValue(), textFieldUrl.getText().trim(), browserType, textPaneMessages, btnScan, btnStop, progressBar);
-					btnScan.setEnabled(false);
-					btnStop.setEnabled(true);
-					brokenLinkScan.start();
+					try {
+						int limit;
+						
+						if (textFieldLimit.getText().equals("No Limit")) {
+							limit = 0;
+						} else {
+							limit = Integer.parseInt(textFieldLimit.getText());
+						}
+						
+						
+						MainBLCRunnable brokenLinkScan = new MainBLCRunnable(textFieldSaveTo.getText(), limit, textFieldUrl.getText().trim(), browserType, textPaneMessages, btnScan, btnStop, progressBar);
+						btnScan.setEnabled(false);
+						btnStop.setEnabled(true);
+						brokenLinkScan.start();
+					} catch (NumberFormatException e) {
+						appendToTextPane("ERROR: link limit not valid\n", textPaneMessages, error);
+					}
 				} else {
-					appendToTextPane("ERROR: all required (*) fields are not filled\n", textPaneMessages, error);
+					appendToTextPane("ERROR: all required fields are not filled\n", textPaneMessages, error);
 				}
 			}
 		});
@@ -226,10 +278,10 @@ public class BLCgui extends JFrame {
 			}
 		});
 
-		JLabel lblSaveTo = new JLabel("Save To:*");
+		JLabel lblSaveTo = new JLabel("Save To:");
 		lblSaveTo.setToolTipText("Folder location to store excel file and screenshots");
 
-		textFieldSaveTo = new JTextField();
+		textFieldSaveTo = new JTextField(new java.io.File(".").getAbsolutePath());
 		textFieldSaveTo.setToolTipText("Folder location to store excel file and screenshots");
 		textFieldSaveTo.setEditable(false);
 		textFieldSaveTo.setColumns(10);
@@ -250,15 +302,9 @@ public class BLCgui extends JFrame {
 			}
 		});
 
-		JLabel lblLimit = new JLabel("Link Limit:*");
-		lblLimit.setToolTipText("The limit of the amount of links scanned (0 = no limit)");
-
-		textFieldLimit = new JTextField();
-		textFieldLimit.setToolTipText("The limit of the amount of links scanned (0 = no limit)");
-		textFieldLimit.setEditable(false);
-		textFieldLimit.setHorizontalAlignment(SwingConstants.CENTER);
-		textFieldLimit.setText("50");
-		textFieldLimit.setColumns(10);
+		JLabel lblLimit = new JLabel("Link Limit:");
+		lblLimit.setToolTipText("The limit of the amount of unique links scanned (0 = no limit)");
+		
 		JSeparator separator_1 = new JSeparator();
 
 		GroupLayout gl_contentPane = new GroupLayout(contentPane);

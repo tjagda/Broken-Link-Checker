@@ -20,6 +20,7 @@ import javax.swing.text.StyleConstants;
 class MainBLCRunnable implements Runnable {
 	private Thread t;
 
+	// General data variables
 	private String foldername;
 	private String currentPage;
 	private int pageLimit;
@@ -27,9 +28,11 @@ class MainBLCRunnable implements Runnable {
 	private List<Link> linkList;
 	private List<String> urlList;
 	
+	// Hash maps
 	private HashMap<String, Integer> responseCodeMap = new HashMap<>();
 	private HashMap<String, String> titleMap = new HashMap<>();
 
+	// GUI variables
 	private JTextPane textPaneMessages;
 	private SimpleAttributeSet error;
 	private JButton btnStop;
@@ -169,15 +172,17 @@ class MainBLCRunnable implements Runnable {
 		// Split list of links into multiple smaller lists
 		List<List<String>> responseParts;
 		if (browserChoice == '0') {
-			if (noDuplList.size() < 50) {
+			// Different size caps when not using a browser
+			if (noDuplList.size() <= 50) {
 				responseParts = HelperFunctions.chopped(noDuplList, 5);
-			} else if (noDuplList.size() < 100) {
+			} else if (noDuplList.size() <= 100) {
 				responseParts = HelperFunctions.chopped(noDuplList, 20);
 			} else {
 				responseParts = HelperFunctions.chopped(noDuplList, (int) Math.abs(Math.ceil(noDuplList.size() / 100)));
 			}
 		} else {
-			if (noDuplList.size() < 5) {
+			// Different size caps when using a browser
+			if (noDuplList.size() <= 5) {
 				responseParts = HelperFunctions.chopped(noDuplList, 1);
 			} else {
 				responseParts = HelperFunctions.chopped(noDuplList, (int) Math.ceil(noDuplList.size() / 5));
@@ -243,109 +248,118 @@ class MainBLCRunnable implements Runnable {
 		}
 	}
 	
+	private void combineData() {
+		// Insert data found from the response code threads
+		for (int i=0; i<linkList.size(); i++) {
+			linkList.get(i).setCode(responseCodeMap.get(linkList.get(i).getUrl()));
+			linkList.get(i).setTitle(titleMap.get(linkList.get(i).getUrl()));
+			
+			progressBar.setValue((int)((double) i / (double) linkList.size() * 100));
+			progressBar.setString(progressBar.getValue() + "% (" + (i) + "/" + linkList.size() + ")");
+		}
+	}
+	
 	@Override
 	public void run() {
-		long startTime;
-		long endTime;
-		long duration;
-		
-		// Timing the beginning of scan
-		startTime = System.nanoTime();
-
-		// Initialize variables in threads and set progress bar to 0
-		LinkScrapeRunnable.resetVariables();
-		ResponseCodeRunnable.resetVariables();
-		progressBar.setValue(0);
-		progressBar.setString("Please Wait...");
-
-		// Clears all the text pane messages
-		if (textPaneMessages.getText().length() > 0) {
-			textPaneMessages.setText("");
-		}
-
-		// Disable SSL Verification
-		HelperFunctions.disableSslVerification();
-		initiateLinkScrapeThreads();
-
-		// Only proceed if scan is not stopped
-		if (btnStop.isEnabled()) {
+		try {
+			long startTime;
+			long endTime;
+			long duration;
 			
-			// Read results from temp file
-			readLinkScrapeResults();
-
-			// Remove duplicates of urlList by creating a new list
-			List<String> noDuplList = HelperFunctions.noDuplVersion(urlList);
-			
-			// Response code scan
-			progressBar.setIndeterminate(false);
-			HelperFunctions.appendToTextPane("\n---------------\nInitiating response code scan... (" + noDuplList.size() + " unique links)\n\n", textPaneMessages, null);
-			initiateResponseCodeThreads(noDuplList);
-			
-			if (btnStop.isEnabled()) {
-				// Read results from temp1 file
-				readResponseCodeResults();	
-				
-				// Assembling all the data into one csv file
-				progressBar.setValue(0);
-				HelperFunctions.appendToTextPane("\n---------------\nAssembling results... (" + linkList.size() + " links in total)\n", textPaneMessages, null);
-				
-				// Insert data found from the response code threads
-				for (int i=0; i<linkList.size(); i++) {
-					linkList.get(i).setCode(responseCodeMap.get(linkList.get(i).getUrl()));
-					linkList.get(i).setTitle(titleMap.get(linkList.get(i).getUrl()));
-					
-					progressBar.setValue((int)((double) i / (double) linkList.size() * 100));
-					progressBar.setString(progressBar.getValue() + "% (" + (i) + "/" + linkList.size() + ")");
-				}
-				
-				// Create excel file
-				progressBar.setIndeterminate(true);
-				progressBar.setString("Creating Excel Document...");
-				HelperFunctions.appendToTextPane("\n---------------\nCreating Excel Document...\n", textPaneMessages, null);
-				HelperFunctions.convertToExcel(linkList, foldername);
-				progressBar.setIndeterminate(false);
+			// Timing the beginning of scan
+			startTime = System.nanoTime();
+	
+			// Initialize variables in threads and set progress bar to 0
+			LinkScrapeRunnable.resetVariables();
+			ResponseCodeRunnable.resetVariables();
+			progressBar.setValue(0);
+			progressBar.setString("Please Wait...");
+	
+			// Clears all the text pane messages
+			if (textPaneMessages.getText().length() > 0) {
+				textPaneMessages.setText("");
 			}
-
-			// Return complete message
-			HelperFunctions.appendToTextPane("\n---------------\n", textPaneMessages, null);
+	
+			// Disable SSL Verification
+			HelperFunctions.disableSslVerification();
+			initiateLinkScrapeThreads();
+	
+			// Only proceed if scan is not stopped
 			if (btnStop.isEnabled()) {
-				// Timing the end of scan
-				endTime = System.nanoTime();
-				duration = (endTime - startTime) / (1000000 * 1000);				
 				
-				// Deleting temp1 file
-				File toDelete = new File("temp1.txt");
-				if (toDelete.exists()) {
-					toDelete.delete();
+				// Read results from temp file
+				readLinkScrapeResults();
+	
+				// Remove duplicates of urlList by creating a new list
+				List<String> noDuplList = HelperFunctions.noDuplVersion(urlList);
+				
+				// Response code scan
+				progressBar.setIndeterminate(false);
+				HelperFunctions.appendToTextPane("\n---------------\nInitiating response code scan... (" + noDuplList.size() + " unique links)\n\n", textPaneMessages, null);
+				initiateResponseCodeThreads(noDuplList);
+				
+				if (btnStop.isEnabled()) {
+					// Read results from temp1 file
+					readResponseCodeResults();	
+					
+					// Assembling all the data into one csv file
+					progressBar.setValue(0);
+					HelperFunctions.appendToTextPane("\n---------------\nAssembling results... (" + linkList.size() + " links in total)\n", textPaneMessages, null);
+					
+					// Combine data found from the response code threads
+					combineData();
+					
+					// Create excel file
+					progressBar.setIndeterminate(true);
+					progressBar.setString("Creating Excel Document...");
+					HelperFunctions.appendToTextPane("\n---------------\nCreating Excel Document...\n", textPaneMessages, null);
+					HelperFunctions.convertToExcel(linkList, foldername);
+					progressBar.setIndeterminate(false);
 				}
-				
-				// Scan finish message on text pane and progress bar
-				HelperFunctions.appendToTextPane("Scan Complete\n", textPaneMessages, null);
-				HelperFunctions.appendToTextPane(linkList.size() + " links found in " + Math.round((double) duration / 60 * 100) / 100 + " min\n", textPaneMessages, null);
-				
-				// Changes buttons to let GUI know that scan is finished
-				btnScan.setEnabled(true);
-				btnStop.setEnabled(false);
-				progressBar.setValue(100);
-				progressBar.setString("Scan Complete");
-				
-				HelperFunctions.appendToTextPane("Check Excel file for search results\n(If scan results are much lower than expected, scan again with the same url but starting with \"https://\")\n", textPaneMessages, null);
-			} else {
+	
+				// Return complete message
+				HelperFunctions.appendToTextPane("\n---------------\n", textPaneMessages, null);
+				if (btnStop.isEnabled()) {
+					// Timing the end of scan
+					endTime = System.nanoTime();
+					duration = (endTime - startTime) / (1000000 * 1000);				
+					
+					// Deleting temp1 file
+					File toDelete = new File("temp1.txt");
+					if (toDelete.exists()) {
+						toDelete.delete();
+					}
+					
+					// Scan finish message on text pane and progress bar
+					HelperFunctions.appendToTextPane("Scan Complete\n", textPaneMessages, null);
+					HelperFunctions.appendToTextPane(linkList.size() + " links found in " + Math.round((double) duration / 60 * 100) / 100 + " min\n", textPaneMessages, null);
+					
+					// Changes buttons to let GUI know that scan is finished
+					btnScan.setEnabled(true);
+					btnStop.setEnabled(false);
+					progressBar.setValue(100);
+					progressBar.setString("Scan Complete");
+					
+					HelperFunctions.appendToTextPane("Check Excel file for search results\n\n(If scan results are much lower than expected, scan again with the same url but starting with \"https://\" or remove any file extensions like \".html\" or \".aspx\")\n", textPaneMessages, null);
+				} else {
+					// Scan stop message on text pane and progress bar
+					HelperFunctions.appendToTextPane("Scan Stopped\n", textPaneMessages, null);
+					btnScan.setEnabled(true);
+					progressBar.setValue(0);
+					progressBar.setIndeterminate(false);
+					progressBar.setString("Scan Stopped");
+				}
+			}  else {
 				// Scan stop message on text pane and progress bar
+				HelperFunctions.appendToTextPane("\n---------------\n", textPaneMessages, null);
 				HelperFunctions.appendToTextPane("Scan Stopped\n", textPaneMessages, null);
 				btnScan.setEnabled(true);
 				progressBar.setValue(0);
 				progressBar.setIndeterminate(false);
 				progressBar.setString("Scan Stopped");
 			}
-		}  else {
-			// Scan stop message on text pane and progress bar
-			HelperFunctions.appendToTextPane("\n---------------\n", textPaneMessages, null);
-			HelperFunctions.appendToTextPane("Scan Stopped\n", textPaneMessages, null);
-			btnScan.setEnabled(true);
-			progressBar.setValue(0);
-			progressBar.setIndeterminate(false);
-			progressBar.setString("Scan Stopped");
+		} catch (OutOfMemoryError e) {
+			HelperFunctions.appendToTextPane("\nFATAL ERROR: Main thread ended due to running out of memory. Please restart the program.\n", textPaneMessages, error);
 		}
 	}
 

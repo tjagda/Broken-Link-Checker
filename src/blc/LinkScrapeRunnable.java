@@ -23,18 +23,23 @@ import org.jsoup.select.Elements;
 
 class LinkScrapeRunnable implements Runnable {
 	private Thread t;
+	
+	// Current page variables
 	private String originalPage;
 	private boolean finalThread;
 	private int pageLimit;
 
+	// Countdown latches
 	private CountDownLatch startSignal;
 	private CountDownLatch endSignal;
 
+	// GUI variables
 	private volatile JTextPane textPaneMessages;
 	private volatile JButton btnStop;
 	private volatile JProgressBar progressBar;
 	private SimpleAttributeSet error;
 
+	// Static/volatile varibles
 	private static volatile FileWriter outputFile;
 	private static volatile List<String> linkList = new ArrayList<String>();
 	private static volatile Set<String> linkSet = new HashSet<String>();
@@ -42,37 +47,42 @@ class LinkScrapeRunnable implements Runnable {
 	private static volatile int numOfWorkingLinks = 0;
 
 	public LinkScrapeRunnable(String currentPage, boolean finalThread, int pageLimit, CountDownLatch startSignal, CountDownLatch endSignal, JTextPane textPaneMessages, JButton btnStop, JProgressBar progressBar) {
+		// Setting variables
 		this.originalPage = currentPage;
 		this.finalThread = finalThread;
 		this.pageLimit = pageLimit;
+		
 		this.startSignal = startSignal;
 		this.endSignal = endSignal;
+		
 		this.textPaneMessages = textPaneMessages;
 		this.btnStop = btnStop;
 		this.progressBar = progressBar;
 
-		if (finalThread)
-			linkList.add(currentPage);
-
 		error = new SimpleAttributeSet();
 		StyleConstants.setForeground(error, Color.RED);
+		
+		// Add starting page into list if thread is the final thread
+		if (finalThread)
+			linkList.add(currentPage);
 	}
 
 	public static void resetVariables() {
-
+		// Create temp file
 		try {
 			outputFile = new FileWriter(new File("temp.txt"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
+		// Reset static variables & (re)create static lists
 		linkList = new ArrayList<String>();
 		linkSet = new HashSet<String>();
 		currentIndex = 0;
 		numOfWorkingLinks = 0;
 	}
 	
-	private synchronized void addToLinkList(String currentUrl, String originalDomain) {
+	private synchronized void addToLinkList(String currentUrl, String originalDomain) throws OutOfMemoryError {
 		// Check page if it is within the domain and is an actual webpage before adding it to the link list
 		if (!linkList.contains(currentUrl) && currentUrl.indexOf(originalDomain) == 0 && !(currentUrl.toLowerCase().contains(".pdf")
 				|| currentUrl.toLowerCase().contains(".zip")
@@ -87,14 +97,14 @@ class LinkScrapeRunnable implements Runnable {
 		}
 	}
 
-	private void getPageLinks(String originalDomain, String currentPage) {
+	private void getPageLinks(String originalDomain, String currentPage) throws OutOfMemoryError {
 		String currentUrl = "";
 		String currentLinkText = "";
 		Connection.Response response = null;
 
 		try {
 			// Try to make initial connection
-			response = Jsoup.connect(currentPage).userAgent("Mozilla").timeout(60000).ignoreContentType(true).ignoreHttpErrors(true).execute();
+			response = Jsoup.connect(currentPage).userAgent("Mozilla").timeout(100000).ignoreContentType(true).ignoreHttpErrors(true).execute();
 
 			// Continue if valid response code
 			if (!(response.statusCode() == 404 || response.statusCode() == 505 || response.statusCode() == 500)) {
@@ -126,63 +136,70 @@ class LinkScrapeRunnable implements Runnable {
 				HelperFunctions.appendToTextPane("ERROR: Invalid response code (" + response.statusCode() + ")\n\n", textPaneMessages, error);
 			}
 		} catch (IOException e) {
+			e.printStackTrace();
 			HelperFunctions.appendToTextPane("ERROR: " + e.getMessage() + "\n\n", textPaneMessages, error);
 		}
 	}
 
 	public void run() {
-		int index;
-
-		// Wait for main thread to give signal to start
 		try {
-			startSignal.await();
-		} catch (InterruptedException e) {
-			HelperFunctions.appendToTextPane("ERROR: " + e.getMessage() + "\n", textPaneMessages, error);
-		}
-
-		// Loop until all work is done and there are no more threads finding links
-		while ((currentIndex < linkList.size() || numOfWorkingLinks > 0) && btnStop.isEnabled() && linkSet.size() < pageLimit) {
-			// Wait for a little bit if there are still threads finding links even though there are no more links to check at the moment
-			if (currentIndex >= linkList.size() && numOfWorkingLinks > 0) {
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e) {
-					HelperFunctions.appendToTextPane("ERROR: " + e.getMessage() + "\n", textPaneMessages, error);
-				}
-			} else {
-				// Increase number to let other threads know to wait and that there is at least one thread finding links
-				numOfWorkingLinks++;
-
-				// Capture current index
-				index = currentIndex++;
-				
-				// Scan page for links if either limit is not reached
-				if (index < linkList.size() && linkSet.size() < pageLimit) {
-					progressBar.setString("On page " + (index + 1) + " | " + linkList.size() + " pages found to scan in total");
-					HelperFunctions.appendToTextPane("Scanning... \t" + linkList.get(index) + "\n", textPaneMessages, null);
-					getPageLinks(originalPage, linkList.get(index));
-				}
-
-				// Decrease number, if 0 then other threads can finish and terminate
-				numOfWorkingLinks--;
+			int index;
+	
+			// Wait for main thread to give signal to start
+			try {
+				startSignal.await();
+			} catch (InterruptedException e) {
+				HelperFunctions.appendToTextPane("ERROR: " + e.getMessage() + "\n", textPaneMessages, error);
 			}
-		}
-
-		if (btnStop.isEnabled()) {
-			// Final thread puts all links found into a temporary text file to read later by main thread
-			if (finalThread) {
-				try {
-					progressBar.setString("Please Wait...");
-					Thread.sleep(5000);
-					outputFile.close();
-				} catch (Exception e1) {
-					e1.printStackTrace();
+	
+			// Loop until all work is done and there are no more threads finding links
+			while ((currentIndex < linkList.size() || numOfWorkingLinks > 0) && btnStop.isEnabled() && linkSet.size() < pageLimit) {
+				// Wait for a little bit if there are still threads finding links even though there are no more links to check at the moment
+				if (currentIndex >= linkList.size() && numOfWorkingLinks > 0) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						HelperFunctions.appendToTextPane("ERROR: " + e.getMessage() + "\n", textPaneMessages, error);
+						e.printStackTrace();
+					}
+				} else {
+					// Increase number to let other threads know to wait and that there is at least one thread finding links
+					numOfWorkingLinks++;
+	
+					// Capture current index
+					index = currentIndex++;
+					
+					// Scan page for links if either limit is not reached
+					if (index < linkList.size() && linkSet.size() < pageLimit) {
+						progressBar.setString("On page " + (index + 1) + " | " + linkList.size() + " pages found to scan in total");
+						HelperFunctions.appendToTextPane("Scanning... \t" + linkList.get(index) + "\n", textPaneMessages, null);
+						getPageLinks(originalPage, linkList.get(index));
+					}
+	
+					// Decrease number, if 0 then other threads can finish and terminate
+					numOfWorkingLinks--;
 				}
 			}
+	
+			if (btnStop.isEnabled()) {
+				// Final thread closes and saves temporary text file to read later by main thread
+				if (finalThread) {
+					try {
+						progressBar.setString("Please Wait...");
+						Thread.sleep(10000);
+						outputFile.close();
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
+			}
+	
+			// Finish thread by signaling the end countdown
+			endSignal.countDown();
+		} catch (OutOfMemoryError e) {
+			endSignal.countDown();
+			HelperFunctions.appendToTextPane("\nERROR: Thread ended due to running out of memory\n", textPaneMessages, error);
 		}
-
-		// Finish thread by signaling the end countodown
-		endSignal.countDown();
 	}
 
 	public void start() {

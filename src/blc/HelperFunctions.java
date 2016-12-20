@@ -43,7 +43,10 @@ import org.openqa.selenium.ie.InternetExplorerDriver;
 public class HelperFunctions {
 	public static void appendToTextPane(String message, JTextPane textPaneMessages, SimpleAttributeSet style) {
 		try {
+			// Insert message to text pane
 			textPaneMessages.getDocument().insertString(textPaneMessages.getDocument().getLength(),	message, style);
+			
+			// Move position to the end of the document
 			textPaneMessages.setCaretPosition(textPaneMessages.getDocument().getLength());
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -66,6 +69,7 @@ public class HelperFunctions {
 	}
 	
 	public static void convertToExcel(List<Link> linkList, String foldername) {
+		// Get current calender info
 		DateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy hh.mm a");
 		Calendar cal = Calendar.getInstance();
 
@@ -242,12 +246,11 @@ public class HelperFunctions {
 				|| currentPage.toLowerCase().contains(".zip") || currentPage.toLowerCase().contains(".docx")
 				|| currentPage.toLowerCase().contains(".jpg") || currentPage.toLowerCase().contains(".jpeg")
 				|| currentPage.toLowerCase().contains(".png") || currentPage.toLowerCase().contains(".gif")
-				|| currentPage.toLowerCase().contains(".ashx") || currentPage.toLowerCase().contains(".eps")
-				|| currentPage.length() <= 1 || currentPage.length() > 0 && currentPage.charAt(0) == '#');
+				|| currentPage.toLowerCase().contains(".ashx") || currentPage.toLowerCase().contains(".eps"));
 	}
 	
 	public static List<String> noDuplVersion(List<String> urlList) {
-		// Remove duplicates of urlList by creating a new list
+		// Iteratively removing duplicates of urlList by creating a new list
 		List<String> noDuplList = new ArrayList<>();
 		for (int i=0; i<urlList.size(); i++) {
 			if (!noDuplList.contains(urlList.get(i))) {
@@ -289,13 +292,15 @@ public class HelperFunctions {
 		}
 	}
 
-	public synchronized static void writeToFile(String message, FileWriter outputFile, JTextPane textPaneMessages) {
+	public synchronized static void writeToFile(String message, FileWriter outputFile, JTextPane textPaneMessages) throws OutOfMemoryError {
 		try {
 			outputFile.write(message);
 			outputFile.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 			appendToTextPane("ERROR: " + e.getMessage() + "\n", textPaneMessages, null);
+		} catch (OutOfMemoryError e) {
+			throw e;
 		}
 	}
 }
