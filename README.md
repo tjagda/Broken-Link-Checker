@@ -1,4 +1,4 @@
-# Broken-Link-Checker
+# Broken Link Checker
 A Java program made as a side-project in my co-op that crawls through a given URL and scans their response codes and take screenshots (if enabled), then outputs its results into an Excel file. Developed using standard Java API, threads, JSwing, JSoup, Selenium, and Apache POI.
 
 # Purpose & Value
